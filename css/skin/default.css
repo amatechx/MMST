@@ -1,0 +1,214 @@
+/* Default Skin for Mousiqua Theme */
+
+/* Theme Colors */
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --background-color: #f8f9fa;
+    --text-color: #333;
+    --link-color: #007bff;
+    --heading-color: #222;
+    --border-color: #dee2e6;
+    --dark-bg: #343a40;
+    --light-bg: #f8f9fa;
+}
+
+/* Global Theme Styles */
+body {
+    color: var(--text-color);
+    background-color: var(--background-color);
+    font-family: 'Open Sans', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--heading-color);
+}
+
+/* Header Skin */
+.header.default {
+    background-color: var(--dark-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header.default .logo h2 {
+    color: var(--primary-color);
+}
+
+/* Navigation Skin */
+.main-menu a {
+    color: var(--text-color);
+    transition: color 0.3s ease;
+}
+
+.main-menu a:hover {
+    color: var(--primary-color);
+}
+
+/* Audio Player Skin */
+.audioplayer {
+    background: #404040;
+    border-radius: 2px;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.audioplayer-playpause {
+    width: 2.5em;
+    height: 100%;
+    text-align: center;
+    text-indent: -9999px;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    color: #fff;
+}
+
+.audioplayer-time {
+    width: 4.375em;
+    height: 100%;
+    line-height: 2.375em;
+    text-align: center;
+    z-index: 2;
+    color: #fff;
+}
+
+.audioplayer-bar {
+    height: 0.875em;
+    background-color: #222;
+    cursor: pointer;
+    z-index: 1;
+    position: relative;
+}
+
+.audioplayer-bar-loaded {
+    background-color: #333;
+    height: 100%;
+    position: absolute;
+    z-index: 1;
+    top: 0;
+}
+
+.audioplayer-bar-played {
+    background: var(--primary-color);
+    height: 100%;
+    position: absolute;
+    z-index: 2;
+    top: 0;
+}
+
+.audioplayer-volume {
+    width: 2.5em;
+    height: 100%;
+    text-align: center;
+    text-indent: -9999px;
+    cursor: pointer;
+    z-index: 2;
+    position: relative;
+    color: #fff;
+}
+
+/* Playlist Skin */
+.playlist {
+    background: var(--light-bg);
+    border-radius: 4px;
+    padding: 1em;
+    border: 1px solid var(--border-color);
+}
+
+.playlist .as-link {
+    cursor: pointer;
+    padding: 0.5em;
+    transition: all 0.3s ease;
+}
+
+.playlist .as-link:hover {
+    background-color: var(--border-color);
+}
+
+/* Active Track */
+.playlist .active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Track Info */
+.block-track {
+    padding: 0.5em 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.block-track:last-child {
+    border-bottom: none;
+}
+
+.block-track h6 {
+    margin: 0;
+    color: var(--text-color);
+}
+
+.block-track span {
+    color: var(--secondary-color);
+    font-size: 0.9em;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+/* Links */
+a {
+    color: var(--link-color);
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #0056b3;
+    text-decoration: none;
+}
+
+/* Section Styles */
+.main {
+    padding: 4rem 0;
+}
+
+.bg-secondary {
+    background-color: var(--light-bg) !important;
+}
+
+/* Card Styles */
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.card-body {
+    background-color: var(--light-bg);
+}
+
+/* Social Icons */
+.block-social a {
+    color: var(--secondary-color);
+    transition: color 0.3s ease;
+}
+
+.block-social a:hover {
+    color: var(--primary-color);
+} 
