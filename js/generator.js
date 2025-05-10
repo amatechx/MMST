@@ -1526,43 +1526,51 @@ const contentGenerator = {
         ]
     },
 
-    // Generate content based on format
+    // Tambahkan fungsi baru untuk mencegah pengulangan
+    getUniqueRandomContent: function(array, lastUsed) {
+        let result;
+        do {
+            result = this.getRandomItem(array);
+        } while (result === lastUsed);
+        return result;
+    },
+
+    // Modifikasi fungsi generate
     generate: function(productName, category, format, language = 'casual', platform = 'tiktok') {
         const style = this.languageStyles[language];
         const platformTemplate = this.platformTemplates[platform];
         
+        // Simpan konten terakhir yang digunakan
+        let lastPrefix = '';
+        let lastFeature = '';
+        let lastHashtag = '';
+        
         let content = '';
         
-        // Attention section with language style and platform
-        content += this.getRandomItem(style.prefix) + '\n';
-        content += this.getRandomItem(platformTemplate.prefix) + '\n\n';
+        // Attention section dengan style bahasa dan platform yang unik
+        content += this.getUniqueRandomContent(style.prefix, lastPrefix) + '\n';
+        lastPrefix = content;
+        
+        content += this.getUniqueRandomContent(platformTemplate.prefix, '') + '\n\n';
         
         // Interest section
-        content += this.getRandomItem(style.connectors) + '\n';
+        content += this.getUniqueRandomContent(style.connectors, '') + '\n';
         
-        // Desire section - platform features
-        content += '✅ ' + this.getRandomItem(platformTemplate.features) + '\n';
-        content += '✅ ' + this.getRandomItem(platformTemplate.features) + '\n';
-        content += '✅ ' + this.getRandomItem(platformTemplate.features) + '\n';
+        // Desire section - fitur platform yang unik
+        const uniqueFeatures = this.shuffle([...platformTemplate.features]).slice(0, 3);
+        uniqueFeatures.forEach(feature => {
+            content += '✅ ' + feature + '\n';
+        });
         
         // Action section
-        content += '\n' + this.getRandomItem(style.closing) + '\n';
+        content += '\n' + this.getUniqueRandomContent(style.closing, '') + '\n';
         content += '%affiliate_link%\n\n';
         
-        // Hashtags
-        content += this.getRandomItems(platformTemplate.hashtags, 5).join(' ');
+        // Hashtags yang unik
+        const uniqueHashtags = this.shuffle([...platformTemplate.hashtags]).slice(0, 5);
+        content += uniqueHashtags.join(' ');
         
         return content;
-    },
-
-    // Helper function to get random item from array
-    getRandomItem: function(array) {
-        return array[Math.floor(Math.random() * array.length)];
-    },
-
-    getRandomItems: function(array, count) {
-        const shuffled = array.sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count);
     },
 
     // Fungsi untuk generate konten dalam jumlah besar
