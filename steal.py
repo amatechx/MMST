@@ -285,7 +285,7 @@ def get_realistic_user_agent(is_mobile: bool = False) -> str:
         else:
             return random.choice(desktop_agents)
 
-def create_driver(proxy: str = None, is_mobile: bool = False, headless: bool = False, page_load_timeout: int = 30) -> webdriver.Chrome:
+def create_driver(proxy: str = None, is_mobile: bool = False, headless: bool = False, page_load_timeout: int = 30, window_size: tuple = (500, 500), window_position: tuple = None) -> webdriver.Chrome:
     """Buat instance WebDriver dengan konfigurasi yang ditentukan dan fitur anti-deteksi"""
     if webdriver is None:
         raise ImportError("Selenium tidak tersedia. Pastikan untuk menginstal selenium: pip install selenium")
@@ -309,11 +309,17 @@ def create_driver(proxy: str = None, is_mobile: bool = False, headless: bool = F
     # Tambahkan argumen tambahan untuk menghindari deteksi
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--start-maximized")
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--disable-popup-blocking")
     chrome_options.add_argument("--disable-notifications")
+    
+    # Set window size 500x500
+    chrome_options.add_argument(f"--window-size={window_size[0]},{window_size[1]}")
+    
+    # Set window position jika disediakan
+    if window_position:
+        chrome_options.add_argument(f"--window-position={window_position[0]},{window_position[1]}")
     
     # Set accept-language
     chrome_options.add_argument("--lang=id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7")
@@ -420,6 +426,27 @@ def create_driver(proxy: str = None, is_mobile: bool = False, headless: bool = F
     except Exception as e:
         logger.error(f"Error saat membuat WebDriver: {str(e)}")
         raise
+
+def calculate_window_position(index, screen_width=1920, screen_height=1080, window_width=500, window_height=500):
+    """Menghitung posisi window berdasarkan indeks"""
+    # Hitung berapa banyak window yang muat per baris
+    windows_per_row = max(1, screen_width // window_width)
+    
+    # Hitung baris dan kolom dari indeks
+    row = index // windows_per_row
+    col = index % windows_per_row
+    
+    # Hitung posisi x dan y
+    x = col * window_width
+    y = row * window_height
+    
+    # Jika posisi di luar layar, reset ke 0 agar tetap terlihat
+    if x >= screen_width:
+        x = 0
+    if y >= screen_height:
+        y = 0
+    
+    return (x, y)
 
 def human_scroll(driver, steps: int = 5) -> None:
     """Melakukan scroll halaman dengan pola yang lebih mirip manusia"""
@@ -822,17 +849,184 @@ def scrape_urls_parallel(
         logger.info(f"Memulai scraping URL: {url}")
         if callback:
             callback(f"Worker {worker_idx+1}: Memulai scraping URL: {url}", 0, worker_idx)
+        
+        # Hitung posisi window berdasarkan worker_idx
+        window_position = calculate_window_position(worker_idx)
             
-        success = scrape_target_with_multiple_proxies(
-            url=url,
-            proxy_manager=proxy_manager,
-            max_retries=max_retries,
-            output_folder=output_folder,
-            is_mobile=is_mobile,
-            headless=headless,
-            callback=lambda msg, prog: callback(f"Worker {worker_idx+1}: {msg}", prog, worker_idx) if callback else None
-        )
-        return url, success
+        # Modifikasi fungsi scrape_target untuk menggunakan window_position
+        def modified_scrape_target(url, proxy, output_folder, is_mobile, headless, callback):
+            driver = None
+            start_time = datetime.now()
+            timestamp = start_time.strftime("%Y%m%d_%H%M%S")
+            device_type = "mobile" if is_mobile else "desktop"
+            
+            # Buat folder output jika belum ada
+            os.makedirs(output_folder, exist_ok=True)
+            
+            try:
+                logger.info(f"Membuat driver {device_type} untuk {url}")
+                if callback:
+                    callback(f"Membuat driver {device_type} untuk {url}", 10)
+                
+                # Gunakan window_position yang dihitung
+                driver = create_driver(
+                    proxy=proxy, 
+                    is_mobile=is_mobile, 
+                    headless=headless,
+                    window_size=(500, 500),
+                    window_position=window_position
+                )
+                
+                # Buka URL target
+                logger.info(f"Mengakses {url}")
+                if callback:
+                    callback(f"Mengakses {url}", 20)
+                    
+                # Simpan URL asli sebelum redirect
+                original_url = url
+                
+                # Load halaman
+                driver.get(url)
+                
+                # Delay random setelah load halaman (simulasi waktu loading)
+                random_delay(1.5, 4.0)
+                
+                # Simpan URL setelah redirect
+                final_url = driver.current_url
+                
+                # Scroll dan interaksi
+                if callback:
+                    callback("View halaman...", 40)
+                    
+                # Scroll dengan pola mirip manusia
+                logger.info("Mensimulasikan scrolling manusia...")
+                if callback:
+                    callback("Mensimulasikan scrolling manusia...", 60)
+                    
+                human_scroll(driver, steps=random.randint(3, 7))
+                
+                # Interaksi dengan konten halaman
+                logger.info("Berinteraksi dengan konten halaman...")
+                if callback:
+                    callback("Berinteraksi dengan konten halaman...", 80)
+                
+                # Gunakan fungsi baru untuk berinteraksi dengan konten
+                find_and_interact_with_content(driver)
+                
+                # Ekstrak data dari halaman
+                page_data = extract_page_data(driver)
+                
+                # Siapkan data hasil (tetapi tidak menyimpannya)
+                result_data = {
+                    "url": url,
+                    "original_url": original_url,
+                    "final_url": final_url,
+                    "redirect_detected": original_url != final_url,
+                    "title": driver.title,
+                    "timestamp": timestamp,
+                    "device_type": device_type,
+                    "proxy": proxy,
+                    "execution_time_seconds": (datetime.now() - start_time).total_seconds(),
+                    "page_data": page_data
+                }
+                
+                logger.info(f"Berhasil memproses {url}")
+                
+                if callback:
+                    callback("View selesai!", 100)
+                    
+                # Bersihkan memori untuk menghemat resource
+                driver.execute_script("window.localStorage.clear();")
+                driver.execute_script("window.sessionStorage.clear();")
+                driver.delete_all_cookies()
+                
+                return True
+                
+            except TimeoutException:
+                logger.error(f"Timeout saat mengakses {url}")
+                if callback:
+                    callback(f"Timeout saat mengakses {url}", 100)
+                return False
+            except WebDriverException as e:
+                logger.error(f"WebDriver error: {str(e)}")
+                if callback:
+                    callback(f"WebDriver error: {str(e)}", 100)
+                return False
+            except Exception as e:
+                logger.error(f"Error tidak terduga: {str(e)}")
+                if callback:
+                    callback(f"Error tidak terduga: {str(e)}", 100)
+                return False
+            finally:
+                # Selalu tutup driver jika ada
+                if driver:
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+                
+                logger.info(f"Total waktu eksekusi: {(datetime.now() - start_time).total_seconds()} detik")
+
+        # Gunakan fungsi modifikasi ini bukannya scrape_target_with_multiple_proxies
+        if proxy_manager:
+            # Dapatkan daftar proxy yang belum ditandai gagal
+            proxies_to_try = proxy_manager.get_working_proxies(max_count=max_retries)
+            
+            success = False
+            for i, proxy in enumerate(proxies_to_try):
+                logger.info(f"Mencoba proxy #{i+1}/{len(proxies_to_try)}: {proxy}")
+                if callback:
+                    # Update progress - each proxy try is a percentage of the total progress
+                    progress = (i / len(proxies_to_try)) * 100
+                    callback(f"Mencoba proxy #{i+1}/{len(proxies_to_try)}: {proxy}", progress, worker_idx)
+                    
+                try:
+                    success = modified_scrape_target(
+                        url=url, 
+                        proxy=proxy, 
+                        output_folder=output_folder, 
+                        is_mobile=is_mobile, 
+                        headless=headless,
+                        callback=lambda msg, prog: callback(msg, progress + (prog / len(proxies_to_try)), worker_idx) if callback else None
+                    )
+                    
+                    if success:
+                        logger.info(f"Berhasil dengan proxy: {proxy}")
+                        if callback:
+                            callback(f"Berhasil dengan proxy: {proxy}", 100, worker_idx)
+                        return url, success
+                    else:
+                        logger.warning(f"Gagal dengan proxy: {proxy}")
+                        proxy_manager.mark_failed(proxy)
+                except Exception as e:
+                    logger.error(f"Error dengan proxy {proxy}: {str(e)}")
+                    proxy_manager.mark_failed(proxy)
+            
+            # Jika semua proxy gagal, coba tanpa proxy
+            logger.info("Semua proxy gagal, mencoba tanpa proxy...")
+            if callback:
+                callback("Semua proxy gagal, mencoba tanpa proxy...", 90, worker_idx)
+            
+            success = modified_scrape_target(
+                url=url, 
+                proxy=None, 
+                output_folder=output_folder, 
+                is_mobile=is_mobile, 
+                headless=headless,
+                callback=lambda msg, prog: callback(msg, prog, worker_idx) if callback else None
+            )
+            return url, success
+        else:
+            # Tanpa proxy
+            success = modified_scrape_target(
+                url=url, 
+                proxy=None, 
+                output_folder=output_folder,
+                is_mobile=is_mobile,
+                headless=headless,
+                callback=lambda msg, prog: callback(msg, prog, worker_idx) if callback else None
+            )
+            return url, success
     
     # Gunakan ThreadPoolExecutor untuk paralelisasi
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -856,7 +1050,7 @@ def scrape_urls_parallel(
                 if callback:
                     callback(f"Worker {worker_idx+1}: Error saat scraping {url}: {str(e)}", 100, worker_idx)
     
-    return results 
+    return results
 
 # ============================
 # BAGIAN 3: GUI & CLI INTERFACE
@@ -1182,7 +1376,7 @@ class StealthScraperGUI:
         
         # Parallel Workers
         ttk.Label(parent, text="Parallel Workers:").grid(row=0, column=0, sticky="w", pady=5)
-        ttk.Spinbox(parent, from_=1, to=8, textvariable=self.workers_var, width=5).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=5)
+        ttk.Spinbox(parent, from_=1, to=1000, textvariable=self.workers_var, width=5).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=5)
         
         # Information text
         info_text = (
@@ -1191,12 +1385,19 @@ class StealthScraperGUI:
             "Nilai yang disarankan: 2-4 workers untuk performa terbaik.\n\n"
             "Penggunaan worker lebih banyak akan mempercepat proses, tetapi\n"
             "juga akan menggunakan lebih banyak resource dan meningkatkan\n"
-            "kemungkinan terdeteksi sebagai bot."
+            "kemungkinan terdeteksi sebagai bot.\n\n"
+            "⚠️ PERHATIAN: Menggunakan worker dalam jumlah besar (>50)\n"
+            "akan membutuhkan resource system yang sangat besar dan\n"
+            "dapat menyebabkan komputer menjadi lambat."
         )
         
         info_label = ttk.Label(parent, text=info_text, wraplength=400, justify="left")
         info_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=10)
         
+        # Toggle Grid Layout
+        self.grid_layout_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(parent, text="Grid Layout Windows (500x500)", variable=self.grid_layout_var).grid(row=2, column=0, columnspan=2, sticky="w", pady=5)
+    
     def browse_file(self, var):
         filename = filedialog.askopenfilename(
             title="Pilih File",
@@ -1231,6 +1432,18 @@ class StealthScraperGUI:
             messagebox.showerror("Error", "Mohon masukkan URL target atau file URL")
             return
             
+        # Validasi jumlah worker
+        worker_count = self.workers_var.get()
+        if worker_count > 50:
+            confirm = messagebox.askyesno(
+                "Peringatan: Banyak Worker", 
+                f"Anda akan menggunakan {worker_count} worker paralel. " + 
+                "Ini akan menggunakan banyak resource komputer dan bisa memperlambat sistem. " +
+                "Apakah Anda yakin ingin melanjutkan?"
+            )
+            if not confirm:
+                return
+        
         self.is_scraping = True
         self.toggle_buttons()
         
